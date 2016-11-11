@@ -76,17 +76,8 @@ class SBMmh(object):
         
         
         self.minEntropy=-np.inf
-        #~ self.max_neoLL=np.inf
         self.neoLL=0
         
-        #find min possible LLs using metadata initialisation
-        #~ try:
-            #~ self.minEntropy=-previous_max['LL']
-            #~ self.max_neoLL=previous_max['neoLL']
-            #~ self.cmax=previous_max['cmax']
-            #~ self.bmax=previous_max['bmax']
-            #~ print "Previous LLs", -self.minEntropy, self.max_neoLL
-        #~ except KeyError:
         self.initialiseBC(b=np.zeros(self.N),c=M.copy())
         self.minEntropy=self.calcEntropy(0)
         self.max_LL=np.zeros(len(thetas))-self.minEntropy
@@ -255,13 +246,6 @@ class SBMmh(object):
                 self.cmax[:,new_max_idxs]=self.c.copy()[:,np.newaxis]
                 self.bmax[:,new_max_idxs]=self.b.copy()[:,np.newaxis]
                 
-                #~ print self.cmax
-                
-                #~ if new_logp > self.max_neoLL:
-                    #~ self.max_neoLL=new_logp
-                    #~ self.minEntropy=self.entropy
-                    #~ self.cmax=self.c.copy()
-                    #~ self.bmax=self.b.copy()
                 
                 if b_i:
                     self.q+=1
@@ -295,8 +279,7 @@ class SBMmh(object):
                     self.drs[x_i,indices]-=dis
                     self.drs[indices,x_i]-=dis
                 self.entropy=old_entropy
-        #~ self.entropy = self.calcEntropy()
-            #~ print t, self.burnin
+                
         if t > self.burnin:
             self.bcount[i,self.b[i]] += 1
             self.ccount[i,self.c[i]] += 1
@@ -388,7 +371,6 @@ class SBMmh(object):
     def updateBlockC(self,r_old):
         
         #sample from proposal distribution (Random moves)
-        #~ s=np.random.multinomial(1, self.drs[r_old,:].flatten()/self.drs[r_old,:].sum()).argmax() #sample neighbour block proportional to edges between blocks
         t=np.random.multinomial(1, self.transition[r_old,:]).argmax() #sample neighbour block proportional to edges between blocks
         
         Rt=self.dr[t] #Rt=self.epsilonB/(self.dr[t] + self.epsilonB)
@@ -415,7 +397,6 @@ class SBMmh(object):
         self.moves=[]
         self.dr=self.drs.sum(1)
         self.transition=self.drs/(self.dr[:,np.newaxis]+1e-200)
-        #cache Rt=self.epsilonB/(self.dr[t] + self.epsilonB)
         self.dr=self.epsilonB/(self.dr + self.epsilonB)
         
         for r in xrange(self.K):
@@ -445,24 +426,17 @@ class SBMmh(object):
         LLs=[]
         self.bestLL=-np.inf
         self.bestLL2=-np.inf
-        #~ self.minEntropy=np.inf
         if self.maxiterations == 0:
             for v in xrange(self.N):
                 self.ccount[v,self.c[v]] += 1
         else:
-            #~ print "Running M-H sampler:"
-            #~ self.recount("start")
             while self.t < self.maxiterations+1:
                 if self.t>self.burnin:
                     self.total_iterations+=1
                 self.acceptance=0
                 self.bacceptance=0
-                #~ tstart=time.time()
                 for i in sample(xrange(self.N),self.N):
-                    #~ print "B",i
-                    #~ self.updateC(i,t)
                     self.updateB(i,self.t)
-                #~ stdout.write(" %i%% Complete %i (%i) Accepted (q=%i), %f, Entropy= %f (%f)\r" %((self.t+1)*100/self.maxiterations,self.acceptance,self.bacceptance,self.q,self.temp,self.entropy,self.neoLL))
                 stdout.write(" %i%% Complete %i (%i) Accepted (q=%i), %f, Entropy= %f\r" %((self.t+1)*100/self.maxiterations,self.acceptance,self.bacceptance,self.q,self.temp,self.entropy))
                 stdout.flush()
                 self.t += 1
@@ -495,23 +469,15 @@ class DCSBMmh(SBMmh):
         drs1[[0,1],[r_old,r_i]]/=2.
         drs2[r_i]/=2.
         
-        dr=self.drs.sum(1)
-        #~ dr2=drs2.sum()
+        dr=self.drs.sum(1
         drds1=np.dot(dr[[r_old,r_i],np.newaxis],dr[np.newaxis,:])
         drds2=drds1.sum(0)
-        drds2[r_i]+=dr[r_old] #nrns1[:,r_old].sum()
+        drds2[r_i]+=dr[r_old] 
         drds2[r_old]=0
         drds1[1,0]=0
         drds1[[0,1],[r_old,r_i]]/=2.
         drds2[r_i]/=2.
         
-        #~ nrns1=np.dot(self.nr[[r_old,r_i],np.newaxis],self.nr[np.newaxis,:])
-        #~ nrns2=nrns1.sum(0)
-        #~ nrns2[r_i]+=self.nr[r_old] #nrns1[:,r_old].sum()
-        #~ nrns2[r_old]=0
-        #~ nrns1[1,0]=0
-        #~ nrns1[[0,1],[r_old,r_i]]/=2.
-        #~ nrns2[r_i]/=2.
         
         cols,=drs2.nonzero()
         drs1=drs1[:,cols]
@@ -529,37 +495,15 @@ class DCSBMmh(SBMmh):
         return entropy
 
 
-def timer():
-    import timeit
-    LLs=[]
-    with open('synth.txt') as f:
-        E=np.int32([row.strip().split() for row in f.readlines()])
-    #~ for th in np.arange(0,1.01,0.04):
-    #~ M=np.arange(1000)
-    M=np.ones(1000)
-    M[0]=0
-    M[2]=2
-    iterations=1000
-    burnin=iterations/2
-    sbm=SBMmh(E,M,theta=1,burnin=burnin,iterations=iterations)
-    sbm.minEntropy=np.inf
-    print timeit.timeit(sbm.calcEntropy,number=10000)
-    #~ print timeit.timeit(sbm.calcEntropy_,number=1000)
-    #~ print timeit.timeit(sbm.calcEntropyDiff,number=1000)
-
 
 def greedyAgglom(E,M,targetK,initK,theta=1,sigmaK=1.2,sbmModel=SBMmh):
     
-    #~ iterations=100
     iterations=0
     
     N=len(M)
     newK=N
-    #~ newK=initK
-    #~ c=None
     b=None
     c=np.arange(N)
-    #~ sbm=SBMmh(E,M,K=int(newK),theta=theta,burnin=iterations/2,iterations=iterations,c=c,b=b)
     sbm=sbmModel(E,M,K=int(newK),theta=1,burnin=iterations/2,iterations=iterations,c=c,b=b)
     newK/=sigmaK
     sbm.merge(int(newK))
@@ -567,10 +511,6 @@ def greedyAgglom(E,M,targetK,initK,theta=1,sigmaK=1.2,sbmModel=SBMmh):
     b=sbm.b.copy()
     if theta>0:
         while newK>targetK:
-            #~ print "K=", newK
-            #~ if newK<300:
-                #~ iterations=1
-            #~ sbm=SBMmh(E,M,K=int(newK),theta=theta,burnin=iterations/2,iterations=iterations,c=c,b=b)
             sbm=sbmModel(E,M,K=int(newK),theta=1,burnin=iterations/2,iterations=iterations,c=c,b=b)
             sbm.infer()
             #~ iterations+=2
@@ -582,14 +522,11 @@ def greedyAgglom(E,M,targetK,initK,theta=1,sigmaK=1.2,sbmModel=SBMmh):
             sbm.merge(int(newK))
             c=sbm.c.copy()
             b=sbm.b.copy()
-            #~ print np.sum((sbm.drs/np.outer(sbm.nr,sbm.nr))>1)
-            #~ iterations*=2
     else :
         newK=targetK
     sbm=sbmModel(E,M,K=newK,theta=theta,burnin=iterations/2,iterations=iterations,c=c,b=b)
     sbm.infer()
     sbm=sbmModel(E,M,K=newK,theta=theta,burnin=iterations/2,iterations=iterations,c=sbm.ccount.argmax(1),b=sbm.bcount.argmax(1))
-    #~ print "Log likelihood=",-sbm.calcEntropy(-1)
     return sbm
 
     
@@ -637,27 +574,14 @@ def fitSBM(E,K,n,greedy_runs=20):
             minLL=sbm.minEntropy
             c=sbm.c.copy()
             b=sbm.b.copy()
-            #~ with open('%s_sbm_labels_%i.txt' % (network,K),'w') as labelfile:
-                #~ for label in c:
-                    #~ labelfile.write('%i \n' % label)
         print "***min entropy*** =", minLL, sbm.minEntropy
     return c
     
 
-def loadAndFitSBM(network,meta,greedy_runs=20,K=None):
-    E,M,c=loadNetwork(meta,network,c=None)
-    if K is None:
-        K=len(np.unique(M))
-    n=len(M)
-    c = fitSBM(E,K,n,greedy_runs=greedy_runs)
-    writePartition("%s_SBM%i.txt" % (network,K),c)
-    
-
-
 """Runs complete algorithm - loads network and runs greedy algorithm multiple times to find
 SBM max partition and then runs neoSBM inference for each value of theta
 """
-def run_full(meta='c',network='synth2',thetas=np.arange(0,0.011,0.001),c=None,greedy_runs=4,sbmModel=SBMmh,iterations=100,savePartitions=False):
+def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh,iterations=100):
     LLs=[]
     E,M,c=loadNetwork(meta,network,c=c)
     N=len(M)
@@ -666,31 +590,6 @@ def run_full(meta='c',network='synth2',thetas=np.arange(0,0.011,0.001),c=None,gr
     b=np.ones(len(M))
     minLL=np.inf
     sbmtext={SBMmh:"SBM", DCSBMmh:"DC"}[sbmModel]
-    if c is None:
-        #try to load previous SBM partition
-        try:
-            with open("%s_%s%i.txt" % (network,sbmtext,targetK)) as f:
-                c=np.int32(f.readlines())
-            print 'c loaded', np.min(c)
-        #fit the SBM if no previously saved SBM parition
-        except IOError:
-            print 'no previously saved partition'
-            for i in range(greedy_runs):
-                sbm=greedyAgglom(E,M,targetK=targetK,initK=min([600,len(M)]),theta=1,sigmaK=1.1,sbmModel=sbmModel)
-                sbm.calcEntropy(-1)
-                if sbm.minEntropy<minLL:
-                    minLL=sbm.minEntropy
-                    c=sbm.c.copy()
-                    b=sbm.b.copy()
-                    with open('%s_sbm_labels_%i.txt' % (network,targetK),'w') as labelfile:
-                        for label in c:
-                            labelfile.write('%i \n' % label)
-                print "***min entropy*** =", minLL, sbm.minEntropy
-        
-            with open("%s_%s%i.txt" % (network,sbmtext,targetK),'w') as f:
-                for ci in c:
-                    f.write('%i \n' % ci)
-        
     
     c=greedyLabelMatching(M,c)
     
@@ -706,8 +605,7 @@ def run_full(meta='c',network='synth2',thetas=np.arange(0,0.011,0.001),c=None,gr
     
     for thi,theta in enumerate(thetas):
         max_iter = iterations
-        print "theta=",theta#, np.sum(b,0), c[::125]
-        #~ minLL=-np.inf
+        print "theta=",theta
         bt=b.copy()
         ct=c.copy()
         #~ if theta==thetas[-1]:
@@ -718,51 +616,31 @@ def run_full(meta='c',network='synth2',thetas=np.arange(0,0.011,0.001),c=None,gr
             max_iter=0
         sbm=sbmModel(E,M,K=targetK,thetas=thetas, theta_idx=thi,burnin=iterations/2,iterations=max_iter,c=ct,b=bt)
         sbm.infer()
-        #~ neoLL.append(sbm.max_neoLL)
         LLth=-sbm.minEntropy
         
-        with open('out/%s-%s_partitions.txt' % (network,meta), 'a') as fp:
+        with open('%s-%s_partitions.txt' % (network,meta), 'a') as fp:
             for thiw,thetaw in enumerate(thetas):
                 fp.write('%e %f %f '  % (thetaw, sbm.max_neoLL[thiw], LLth))
                 for ci in sbm.cmax[:,thiw]:
                     fp.write('%i ' % ci)
                 fp.write('\n')
         
-        #~ print theta,LLt
-        #~ if theta==thetas[-1]:
-            #~ print "Log likelihood=",LLt
-        #~ minLL=LLt
-        #~ drst=sbm.drs
-        #~ nrt=sbm.nr
         
         new_max_idxs = (neoLL<sbm.max_neoLL).nonzero()[0]
         neoLL[new_max_idxs] = sbm.max_neoLL[new_max_idxs]
         qs[new_max_idxs] = np.sum(sbm.bmax[:,new_max_idxs],0)
-        #~ LL[new_max_idxs] = sbm.max_neoLL[new_max_idxs]
         
-        #~ LL.append(minLL)
-        #~ qs.append(qt)
-        #~ print "theta",theta,"SBMLL",LLt,qt, 
-        print "neoSBMLL",neoLL
-        print "q", qs
-        #~ print "SBMLL",neoLL - (qs*np.log(thetas) + (N-qs)*np.log(1-thetas))
-        print "SBMLL",sbm.max_LL
-        #~ print sbm.cmax
-        #~ plt.semilogx(thetas,neoLL- (qs*np.log(thetas/(1-thetas)) + N*np.log(1-thetas)))
-    
+        
     LL= neoLL - (qs*np.log(thetas) + (N-qs)*np.log(1-thetas))
     
     
     
     return LL,qs,neoLL
 
-#~ from matplotlib import pyplot as plt
-#~ plt.ion()
-
 
 """Runs the neoSBM multiple times to find the average LL and qs paths
 """
-def run(meta,network,thetamin,greedy_runs=20,sbmModel=SBMmh,iterations=200,runs=1,writeAll=True,savePartitions=True):
+def run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=200,runs=1):
     thetas=np.append(0,10**np.arange(thetamin,0-thetamin/50.,-thetamin/50.))
     #~ thetas=np.append(0,10**np.arange(thetamin,np.log10(0.5),-thetamin/50.))
     
@@ -771,7 +649,7 @@ def run(meta,network,thetamin,greedy_runs=20,sbmModel=SBMmh,iterations=200,runs=
     sbm={SBMmh:"", DCSBMmh:"DC_"}[sbmModel]
     for i in xrange(runs):
         print i
-        LL,qs,neoLL = run_full(meta,network,thetas,greedy_runs=greedy_runs,sbmModel=sbmModel,iterations=iterations,savePartitions=savePartitions)
+        LL,qs,neoLL = run_it(E,M,c,network,thetas,sbmModel=sbmModel,iterations=iterations)
         LLs+=np.array(LL)
         qqs+=np.array(qs)
         
@@ -793,109 +671,6 @@ def run(meta,network,thetamin,greedy_runs=20,sbmModel=SBMmh,iterations=200,runs=
         
 
 
-
-"""Runs search algorithm - loads network and SBM max partition and 
-then runs neoSBM inference for by branching values of theta to search for 
-distinct LL models.
-"""
-def run_search(meta='c',network='synth2',log10theta_min=-50,E=None,M=None,c=None,theta_res=0.1):
-    LLs=[]
-    E,M,c=loadNetwork(meta,network,E,M,c)
-    print "network loaded"
-    targetK=len(np.unique(M))
-    if c is None:
-        c=fitSBM(E,targetK,len(M))
-    b=np.ones(len(M))
-    #~ minLL=np.inf
-    #~ if c is None:
-        #~ for i in range(greedy_runs):
-            #~ sbm=greedyAgglom(E,M,targetK=targetK,initK=600,theta=1,sigmaK=1.1)
-            #~ sbm.calcEntropy(-1)
-            #~ if sbm.minEntropy<minLL:
-                #~ minLL=sbm.minEntropy
-                #~ c=sbm.c.copy()
-                #~ b=sbm.b.copy()
-                #~ with open('%s_sbm_labels_%i.txt' % (network,targetK),'w') as labelfile:
-                    #~ for label in c:
-                        #~ labelfile.write('%i \n' % label)
-            #~ print "***min entropy*** =", minLL, sbm.minEntropy
-        
-    
-    c=greedyLabelMatching(M,c)
-    
-    model_info={"LLs":[],"thetas":[],"partitions":{}}
-    minLL=None
-    maxLL=None
-    model_info = divide(E,M,targetK,b,c,log10theta_min,0.,model_info,minLL,maxLL,theta_res=theta_res,filestem=network+str(meta))
-    return model_info
-    
-
-def divide(E,M,K,b,c,log10theta_min,log10theta_max,model_info,minLL=None,maxLL=None,theta_res=0.1,filestem=''):
-    
-    iterations=200
-    
-    ### Calculate min and max LL ###
-    minLLt=minLL
-    maxLLt=maxLL
-    if minLL is None:
-        bt=b.copy()
-        ct=c.copy()
-        log10theta=log10theta_min
-        sbm=SBMmh(E,M,K,theta=10**log10theta,burnin=iterations/2,iterations=iterations,c=ct,b=bt)
-        sbm.infer()
-        sbm_min=SBMmh(E,M,K,theta=10**log10theta,burnin=iterations/2,iterations=iterations,c=sbm.ccount.argmax(1),b=sbm.bcount.argmax(1))
-        minLLt=-sbm_min.calcEntropy(-1)
-        model_info["LLs"].append(minLLt)
-        model_info["thetas"].append(log10theta_min)
-        if not model_info["partitions"].has_key(minLLt):
-            model_info["partitions"][minLLt]=sbm_min.c
-        writePartition(filestem+'%.2f' % log10theta_min,sbm_min.c)
-        print "ADD MIN"
-        print minLLt,log10theta_min,len(model_info["thetas"])
-    print log10theta_min,"\tMin Log likelihood=", minLLt
-    
-    if maxLL is None:
-        bt=b.copy()
-        ct=c.copy()
-        log10theta=log10theta_max
-        sbm=SBMmh(E,M,K,theta=10**log10theta,burnin=iterations/2,iterations=iterations,c=ct,b=bt)
-        sbm.infer()
-        sbm_max=SBMmh(E,M,K,theta=10**log10theta,burnin=iterations/2,iterations=iterations,c=sbm.ccount.argmax(1),b=sbm.bcount.argmax(1))
-        maxLLt=-sbm_max.calcEntropy(-1)
-        if not model_info["partitions"].has_key(maxLLt):
-            model_info["partitions"][maxLLt]=sbm_max.c
-    print log10theta_max,"\tMax Log likelihood=", maxLLt
-    
-    if minLLt==maxLLt:
-        #~ print "ADD TERM"
-        #~ model_info["LLs"].append(maxLLt)
-        #~ model_info["thetas"].append(log10theta_max)
-        #~ print maxLLt,log10theta_max,len(model_info["thetas"])
-        return model_info
-    
-    ### Start recursion ###
-    if (log10theta_max-log10theta_min) > theta_res:
-        log10theta_mid=log10theta_min + (log10theta_max-log10theta_min)/2.
-        
-        model_info_a = divide(E,M,K,b,c,log10theta_min,log10theta_mid,model_info,minLLt,None,theta_res,filestem)
-        
-        midLL=model_info_a["LLs"][-1]
-        print "modelB",midLL
-        
-        model_info_b = divide(E,M,K,b,c,log10theta_mid,log10theta_max,model_info,midLL,maxLLt,theta_res,filestem)
-        
-    else:
-        print "ADD RES"
-        model_info["LLs"].append(minLLt)
-        model_info["thetas"].append(log10theta_min)
-        model_info["LLs"].append(maxLLt)
-        model_info["thetas"].append(log10theta_max)
-        print maxLLt,log10theta_max,len(model_info["thetas"])
-        writePartition(filestem+'%.3f' % log10theta_max,model_info["partitions"][maxLLt])
-        return model_info
-        
-    return model_info
-
 def writePartition(file,c):
     with open(file,'w') as f:
         for ci in c:
@@ -905,93 +680,3 @@ def writePartition(file,c):
 
 
 
-def loadNetwork(meta='c',network='synth',E=None,M=None,c=None):
-    if E is None:
-        if network=='karate':
-            targetK=2
-            with open('data/karate_edges_.txt') as f:
-                E=np.int32([row.strip().split() for row in f.readlines()])-1
-            with open('data/karate_labels_%s.txt' % meta) as f:
-            #~ with open('karate_labels_sbm.txt') as f:
-                M=np.int32([row.split()[1] for row in f.readlines()])-1
-        elif network.startswith('laz'):
-            E,M=getLazega(meta,network.strip('laz'))
-            targetK=3
-        elif network=='seafoodweb':
-            with open('data/seafoodweb-edges_undir.txt') as f:
-                E=np.int32([row.strip().split()[:2] for row in f.readlines()])
-            if meta=='feed':
-                with open('data/seafoodweb-feeding.txt') as f:
-                    M=np.int32([row.split()[0] for row in f.readlines()])
-            else:
-                with open('data/seafoodweb-habitat.txt') as f:
-                    M=np.int32([row.split()[0] for row in f.readlines()])
-        elif network=='airport':
-            with open('data/airport-edges.txt') as f:
-                E=np.int32([row.strip().split()[:2] for row in f.readlines()])
-            if meta=='tmzn':
-                with open('data/airport-timezone.txt') as f:
-                    M=np.int32([row.split()[0] for row in f.readlines()])
-                with open('data/airport_sbm_labels_39_51932.txt') as f:
-                    c=np.int32([row.split()[0] for row in f.readlines()])
-            else:
-                with open('data/airport-country.txt') as f:
-                    M=np.int32([row.split()[0] for row in f.readlines()])
-                with open('data/airport_sbm_labels_240_33966.txt') as f:
-                    c=np.int32([row.split()[0] for row in f.readlines()])
-        elif network.startswith('malaria'):
-            with open('data/%s.txt' % network) as f:
-                E=np.int32([row.strip().split()[:2] for row in f.readlines()])-1
-            with open('data/malaria-%s_labels.txt' % meta) as f:
-                M=np.int32([row.split()[0] for row in f.readlines()])
-            if np.min(M)==1:
-                M-=1
-        else:
-            targetK=4
-            if meta=='a':
-                with open('%s_local_coreper_labels2.txt' % network) as f:
-                    c=np.int32(f.readlines())
-                with open('%s_local_assort_labels.txt' % network) as f:
-                    M=np.int32(f.readlines())
-            else:
-                with open('%s_local_assort_labels.txt' % network) as f:
-                    c=np.int32(f.readlines())
-                with open('%s_local_coreper_labels2.txt' % network) as f:
-                    M=np.int32(f.readlines())
-            
-            with open('%s.txt' % network) as f:
-                E=np.int32([row.strip().split() for row in f.readlines()])
-    return E,M,c
-
-
-def getLazega(idx,network='advice'):
-    """
-    0. seniority
-    1. status (1=partner; 2=associate)
-    2. gender (1=man; 2=woman)
-    3. office (1=Boston; 2=Hartford; 3=Providence)
-    4. years with the firm
-    5. age
-    6. practice (1=litigation; 2=corporate)
-    7. law school (1: harvard, yale; 2: ucon; 3: other)"""
-    
-    if network=='work':
-        with open("data/ELwork.dat") as f:
-            A=np.int32([row.split() for row in f.readlines() if row.strip()!=''])
-    elif network=='advice':
-        with open("data/ELadv.dat") as f:
-            A=np.int32([row.split() for row in f.readlines() if row.strip()!=''])
-    else :
-        with open("data/ELfriend.dat") as f:
-            A=np.int32([row.split() for row in f.readlines() if row.strip()!=''])
-    E=[]
-    #~ print "A",A
-    for i,row in enumerate(A):
-        for j,val in enumerate(row):
-            if (val>0) and (i<j):
-                E.append([i,j])
-    E=np.array(E)
-    #~ print E
-    with open("data/ELattr.dat") as f:
-        M=np.int32([row.split()[idx].strip("\n") for row in f.readlines()])-1
-    return E,M
