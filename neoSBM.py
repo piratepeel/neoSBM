@@ -529,7 +529,10 @@ def greedyAgglom(E,M,targetK,initK,theta=1,sigmaK=1.2,sbmModel=SBMmh):
         print lkjsadflkjd
     sbm=sbmModel(E,M,K=newK,thetas=[theta],burnin=iterations/2,iterations=iterations,c=c,b=b)
     sbm.infer()
-    sbm=sbmModel(E,M,K=newK,thetas=[theta],burnin=iterations/2,iterations=iterations,c=sbm.ccount.argmax(1),b=sbm.bcount.argmax(1))
+    #~ print " "
+    #~ print sbm.c
+    #~ print sbm.cmax[:,0]
+    #~ sbm=sbmModel(E,M,K=newK,thetas=[theta],burnin=iterations/2,iterations=iterations,c=sbm.cmax[:,0],b=b)
     return sbm
 
     
@@ -552,7 +555,7 @@ def greedyLabelMatching(M,C):
     
     for k in range(K):
         idx=np.argmax(KK)
-        m=idx/K
+        m=int(np.floor(idx/K))
         c=np.mod(idx,K)
         newC[C==c]=m
         #~ print c, "to", m, "(",np.max(KK),")"
@@ -572,73 +575,75 @@ def fitSBM(E,K,n,greedy_runs=20):
     
     for i in range(greedy_runs):
         sbm=greedyAgglom(E,M,targetK=K,initK=n,theta=1,sigmaK=1.1)
-        sbm.calcEntropy(-1)
-        if sbm.minEntropy<minLL:
-            minLL=sbm.minEntropy
+        sbm_minEntropy = sbm.calcEntropy(-1)
+        #~ print sbm_minEntropy
+        #~ print sbm.c
+        if sbm_minEntropy<minLL:
+            minLL=sbm_minEntropy
             c=sbm.c.copy()
             b=sbm.b.copy()
-        print "***min entropy*** =", minLL, sbm.minEntropy
+        print "***min entropy*** =", minLL, sbm_minEntropy
+        #~ print adas
     return c
     
 
-#~ """Runs complete algorithm - loads network and runs greedy algorithm multiple times to find
-#~ SBM max partition and then runs neoSBM inference for each value of theta
-#~ """
-#~ def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh,iterations=100):
-    #~ LLs=[]
+"""Runs complete algorithm - loads network and runs greedy algorithm multiple times to find
+SBM max partition and then runs neoSBM inference for each value of theta
+"""
+def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh,iterations=100):
+    LLs=[]
     #~ E,M,c=loadNetwork(meta,network,c=c)
-    #~ N=len(M)
+    N=len(M)
     #~ print "network loaded"
-    #~ targetK=len(np.unique(M))
-    #~ b=np.ones(len(M))
-    #~ minLL=np.inf
-    #~ sbmtext={SBMmh:"SBM", DCSBMmh:"DC"}[sbmModel]
+    targetK=len(np.unique(M))
+    b=np.ones(len(M))
+    minLL=np.inf
+    sbmtext={SBMmh:"SBM", DCSBMmh:"DC"}[sbmModel]
     
-    #~ c=greedyLabelMatching(M,c)
+    c=greedyLabelMatching(M,c)
     
     
-    #~ max_iter=iterations
+    max_iter=iterations
     
-    #~ prs=[np.ones((targetK,targetK))]
-    #~ nrs=[np.ones(targetK)]
-    #~ modeldict={}
-    #~ qs=np.zeros(len(thetas))
-    #~ LL=np.zeros(len(thetas))-np.inf
-    #~ neoLL=np.zeros(len(thetas))-np.inf
+    prs=[np.ones((targetK,targetK))]
+    nrs=[np.ones(targetK)]
+    modeldict={}
+    qs=np.zeros(len(thetas))
+    LL=np.zeros(len(thetas))-np.inf
+    neoLL=np.zeros(len(thetas))-np.inf
     
-    #~ for thi,theta in enumerate(thetas):
-        #~ max_iter = iterations
-        #~ print "theta=",theta
-        #~ bt=b.copy()
-        #~ ct=c.copy()
-        if theta==thetas[-1]:
-        #~ if not (theta>0):
-            #~ max_iter=1
-        #~ if not theta<1:
-            #~ bt[:]=1
-            #~ max_iter=0
-        #~ sbm=sbmModel(E,M,K=targetK,thetas=thetas, theta_idx=thi,burnin=iterations/2,iterations=max_iter,c=ct,b=bt)
-        #~ sbm.infer()
-        #~ LLth=-sbm.minEntropy
+    for thi,theta in enumerate(thetas):
+        max_iter = iterations
+        print "theta=",theta
+        bt=b.copy()
+        ct=c.copy()
+        if not (theta>0):
+            max_iter=1
+        if not theta<1:
+            bt[:]=1
+            max_iter=0
+        sbm=sbmModel(E,M,K=targetK,thetas=thetas, theta_idx=thi,burnin=iterations/2,iterations=max_iter,c=ct,b=bt)
+        sbm.infer()
+        LLth=-sbm.minEntropy
         
-        #~ with open('%s-%s_partitions.txt' % (network,meta), 'a') as fp:
-            #~ for thiw,thetaw in enumerate(thetas):
-                #~ fp.write('%e %f %f '  % (thetaw, sbm.max_neoLL[thiw], LLth))
-                #~ for ci in sbm.cmax[:,thiw]:
-                    #~ fp.write('%i ' % ci)
-                #~ fp.write('\n')
-        
-        
-        #~ new_max_idxs = (neoLL<sbm.max_neoLL).nonzero()[0]
-        #~ neoLL[new_max_idxs] = sbm.max_neoLL[new_max_idxs]
-        #~ qs[new_max_idxs] = np.sum(sbm.bmax[:,new_max_idxs],0)
+        with open('%s-%s_partitions.txt' % (network,meta), 'a') as fp:
+            for thiw,thetaw in enumerate(thetas):
+                fp.write('%e %f %f '  % (thetaw, sbm.max_neoLL[thiw], LLth))
+                for ci in sbm.cmax[:,thiw]:
+                    fp.write('%i ' % ci)
+                fp.write('\n')
         
         
-    #~ LL= neoLL - (qs*np.log(thetas) + (N-qs)*np.log(1-thetas))
+        new_max_idxs = (neoLL<sbm.max_neoLL).nonzero()[0]
+        neoLL[new_max_idxs] = sbm.max_neoLL[new_max_idxs]
+        qs[new_max_idxs] = np.sum(sbm.bmax[:,new_max_idxs],0)
+        
+        
+    LL= neoLL - (qs*np.log(thetas) + (N-qs)*np.log(1-thetas))
     
     
     
-    #~ return LL,qs,neoLL
+    return LL,qs,neoLL
 
 
 """Runs the neoSBM multiple times to find the average LL and qs paths

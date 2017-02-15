@@ -57,4 +57,4 @@ if __name__=="__main__":
     
     thetamin=float(args.thetamin)
     #ns.run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=100,logtheta=True,runs=10)
-    ns.run(E,M,c,network,thetamin,iterations=100,logtheta=True,runs=10)
+    ns.run(E,M,c,network,thetamin,iterations=100,runs=10)
