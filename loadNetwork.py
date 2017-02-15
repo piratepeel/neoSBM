@@ -22,6 +22,5 @@ def loadPartition(partitionFile):
     with open(partitionFile) as f:
         M=np.int32([row.split()[0] for row in f.readlines()])
     
-    if np.min(M)>0:
-        M-=np.min(M)
+    
     return M

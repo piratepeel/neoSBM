@@ -27,7 +27,7 @@ if __name__=="__main__":
     
     parser.add_argument("networkfile", help="Input network")
     parser.add_argument("metadatafile", help="Metadata labels")
-    parser.add_argument("thetamin", help="Minimum value for theta")
+    parser.add_argument("thetamin", help="Minimum value for log10 theta")
     parser.add_argument("-o","--output", help='filename stem for output files')
     parser.add_argument("-s","--sbmopt", help='SBM optimal partition (if known already)')
     #~ parser.add_argument("-p","--path", help="Path to files (if not in current directory)")
