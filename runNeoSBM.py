@@ -30,6 +30,7 @@ if __name__=="__main__":
     parser.add_argument("thetamin", help="Minimum value for log10 theta")
     parser.add_argument("-o","--output", help='filename stem for output files')
     parser.add_argument("-s","--sbmopt", help='SBM optimal partition (if known already)')
+    parser.add_argument("-p","--plot", help='plots output only (no inference)', action='store_true')
     #~ parser.add_argument("-p","--path", help="Path to files (if not in current directory)")
     args = parser.parse_args()
     
@@ -40,22 +41,28 @@ if __name__=="__main__":
     network = args.networkfile.split('.')[0]
     meta = args.metadatafile.split('.')[0]
     
-    import loadNetwork
+    if args.plot:
+        import disp_output
+        disp_output.plotLq(network,meta,log=True,DC=False)
+        disp_output.plt.show()
     
-    E,M = loadNetwork.load(args.networkfile, args.metadatafile)
+    else :
+        import loadNetwork
+        
+        E,M = loadNetwork.load(args.networkfile, args.metadatafile)
 
-    import neoSBM as ns
-    
-    if args.sbmopt:
-        c=loadNetwork.loadPartition(args.sbmopt)
-    else:
-        K=len(ns.np.unique(M))
-        n=len(M)
-        print M
-        print K, n
-        c = ns.fitSBM(E,K,n,greedy_runs=20)
-        ns.writePartition("%s_SBM%i.txt" % (network,K),c)
-    
-    thetamin=float(args.thetamin)
-    #ns.run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=100,logtheta=True,runs=10)
-    ns.run(E,M,c,network,meta,thetamin,iterations=100,runs=10)
+        import neoSBM as ns
+        
+        if args.sbmopt:
+            c=loadNetwork.loadPartition(args.sbmopt)
+        else:
+            K=len(ns.np.unique(M))
+            n=len(M)
+            print M
+            print K, n
+            c = ns.fitSBM(E,K,n,greedy_runs=20)
+            ns.writePartition("%s_SBM%i.txt" % (network,K),c)
+        
+        thetamin=float(args.thetamin)
+        #ns.run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=100,logtheta=True,runs=10)
+        ns.run(E,M,c,network,meta,thetamin,iterations=100,runs=10)

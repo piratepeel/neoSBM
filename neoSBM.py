@@ -50,7 +50,7 @@ class SBMmh(object):
             self.log_cache[y]=ans
             return ans
     
-    def __init__(self, E, M,K=None,burnin=0,iterations=1e3,thetas=[.5],theta_idx=0,epsilon=1,b=None,c=None,nm=10):
+    def __init__(self, E, M,K=None,burnin=0,iterations=1e3,thetas=[.5],theta_idx=0,epsilon=1,b=None,c=None,nm=10,partitionFile=None):
         
         self.e=E   #edgelist
         self.N=len(M)       #number of nodes
@@ -62,6 +62,8 @@ class SBMmh(object):
         self.x=M        # metadata
         self.burnin = burnin
         self.maxiterations = iterations
+        self.partitionFile =partitionFile
+        self.entropy_history = []
         
         self.nm=nm
         
@@ -158,6 +160,8 @@ class SBMmh(object):
         entropy= -xlogy(drs,prs).sum()
         entropy-=xlogy(nrns-drs,1-prs).sum()
         entropy/=2
+        if entropy  < self.minEntropy:
+            self.minEntropy=entropy
         return entropy
     
     def calcBlockEntropyDiff(self,r_old,r_i):
@@ -202,16 +206,18 @@ class SBMmh(object):
         #sample from a uniform distribution
         b_i = np.random.binomial(1,0.5)
         
+        self.entropy=self.calcEntropy(t)
+        logp = -self.entropy #likelihood term
+        logp += (self.q)*self.thetaln + (self.N-self.q)*self.minusthetaln #p(b|th)
+        
         #accept or reject
         if b_i == b_old: # if no change then accept reject has no impact
             if b_i:
                 self.updateC(i,t)
+                self.entropy=self.calcEntropy(t)
         else: 
             
-            self.entropy=self.calcEntropy(t)
-            logp = -self.entropy #likelihood term
-            logp += (self.q)*self.thetaln + (self.N-self.q)*self.minusthetaln #p(b|th)
-            self.neoLL=logp[self.theta_idx]
+            self.neoLL=logp
             old_entropy=self.entropy #cache entropy value
             
             if b_i:
@@ -226,27 +232,19 @@ class SBMmh(object):
                 self.drs[x_i,indices]+=dis
                 self.drs[indices,x_i]+=dis
                 
-                #recalculate entropy - (this is done already by updateC
-                self.entropy=self.calcEntropy(t)
+            self.entropy=self.calcEntropy(t)
             
             qdiff=b_i*2-1
             
             new_logp = -self.entropy #likelihood term
-            new_logp += (self.q+qdiff)*self.thetaln + (self.N-self.q-qdiff)*self.minusthetaln #p(b|th)
+            new_logp += (self.q+qdiff)*self.thetaln[self.theta_idx] + (self.N-self.q-qdiff)*self.minusthetaln[self.theta_idx] #p(b|th)
             
-            p_acceptance=min(np.exp((new_logp[self.theta_idx]-logp[self.theta_idx])/self.temp),1)
+            p_acceptance=min(np.exp((new_logp-logp[self.theta_idx])/self.temp),1)
             #update
             if np.random.binomial(1, p_acceptance):
                 self.bacceptance+=1
                 self.b[i]=b_i
                 
-                new_max_idxs = (new_logp > self.max_neoLL).nonzero()[0]
-                #~ print new_max_idxs
-                self.max_neoLL[new_max_idxs] = new_logp[new_max_idxs]
-                self.max_LL[new_max_idxs] = -self.entropy
-                self.minEntropy=self.entropy
-                self.cmax[:,new_max_idxs]=self.c.copy()[:,np.newaxis]
-                self.bmax[:,new_max_idxs]=self.b.copy()[:,np.newaxis]
                 
                 
                 if b_i:
@@ -281,7 +279,28 @@ class SBMmh(object):
                     self.drs[x_i,indices]-=dis
                     self.drs[indices,x_i]-=dis
                 self.entropy=old_entropy
-                
+        
+    
+        new_logp = -self.entropy #likelihood term
+        new_logp += self.q*self.thetaln + (self.N-self.q)*self.minusthetaln #p(b|th)
+        
+        new_max_idxs = (new_logp > self.max_neoLL).nonzero()[0]
+        #~ print new_max_idxs
+        self.max_neoLL[new_max_idxs] = new_logp[new_max_idxs]
+        self.max_LL[new_max_idxs] = -self.entropy
+        #~ self.minEntropy=self.entropy
+        self.cmax[:,new_max_idxs]=self.c.copy()[:,np.newaxis]
+        self.bmax[:,new_max_idxs]=self.b.copy()[:,np.newaxis]
+        
+        if self.partitionFile and (len(new_max_idxs)>0):
+            if self.entropy not in self.entropy_history:
+                self.entropy_history.append(self.entropy)
+                with open(self.partitionFile, 'a') as fp:
+                    fp.write('%f %i '  % (self.entropy, self.q))
+                    for ci in self.c:
+                        fp.write('%i ' % ci)
+                    fp.write('\n')
+        
         if t > self.burnin:
             self.bcount[i,self.b[i]] += 1
             self.ccount[i,self.c[i]] += 1
@@ -333,8 +352,7 @@ class SBMmh(object):
         self.drs[c_i,indices]+=dis
         self.drs[indices,c_i]+=dis
         
-        self.entropy=self.calcEntropy(t)
-        entropy_difference-=self.entropy
+        entropy_difference-=self.calcEntropy(t)
         
         ps_r=0.
         for j in self.edge_to[i]:
@@ -350,7 +368,7 @@ class SBMmh(object):
         except ZeroDivisionError:
             ps_r=1
         
-        p_acceptance=min(np.exp(entropy_difference)*ps_r/(pr_s+1e-200),1)
+        p_acceptance=min(np.exp(entropy_difference/self.temp)*ps_r/(pr_s+1e-200),1)
         
         
         #update
@@ -612,6 +630,8 @@ def run_it(E,M,c,network='synth2',meta='c',thetas=np.arange(0,0.011,0.001),sbmMo
     LL=np.zeros(len(thetas))-np.inf
     neoLL=np.zeros(len(thetas))-np.inf
     
+    entropy_history = []
+    
     for thi,theta in enumerate(thetas):
         max_iter = iterations
         #~ print "theta=",theta
@@ -622,16 +642,15 @@ def run_it(E,M,c,network='synth2',meta='c',thetas=np.arange(0,0.011,0.001),sbmMo
         if not theta<1:
             bt[:]=1
             max_iter=0
-        sbm=sbmModel(E,M,K=targetK,thetas=thetas, theta_idx=thi,burnin=iterations/2,iterations=max_iter,c=ct,b=bt)
+            
+        partitionFile='out/%s-%s_partitions.txt' % (network,meta)
+        sbm=sbmModel(E,M,K=targetK,thetas=thetas, theta_idx=thi,burnin=iterations/2,iterations=max_iter,c=ct,b=bt,partitionFile=partitionFile)
+        sbm.entropy_history = entropy_history
         sbm.infer()
+        entropy_history = sbm.entropy_history
+        
         LLth=-sbm.minEntropy
         
-        with open('out/%s-%s_partitions.txt' % (network,meta), 'a') as fp:
-            for thiw,thetaw in enumerate(thetas):
-                fp.write('%e %f %f '  % (thetaw, sbm.max_neoLL[thiw], LLth))
-                for ci in sbm.cmax[:,thiw]:
-                    fp.write('%i ' % ci)
-                fp.write('\n')
         
         
         new_max_idxs = (neoLL<sbm.max_neoLL).nonzero()[0]
