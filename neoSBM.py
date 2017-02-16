@@ -439,7 +439,7 @@ class SBMmh(object):
                 self.bacceptance=0
                 for i in sample(xrange(self.N),self.N):
                     self.updateB(i,self.t)
-                stdout.write(" %i%% Complete %i (%i) Accepted (q=%i), %f, Entropy= %f\r" %((self.t+1)*100/self.maxiterations,self.acceptance,self.bacceptance,self.q,self.temp,self.entropy))
+                stdout.write("Theta=%f\t %i%% Complete %i (%i) Accepted (q=%i), %f, Entropy= %f\r" %(self.thetas[self.theta_idx],(self.t+1)*100/self.maxiterations,self.acceptance,self.bacceptance,self.q,self.temp,self.entropy))
                 stdout.flush()
                 self.t += 1
                 self.temp=1.+ 0.5*(self.temp_init - 1)*(1+np.cos(2*self.t*np.pi/self.maxiterations))*(self.t<self.maxiterations/2.)
@@ -590,7 +590,7 @@ def fitSBM(E,K,n,greedy_runs=20):
 """Runs complete algorithm - loads network and runs greedy algorithm multiple times to find
 SBM max partition and then runs neoSBM inference for each value of theta
 """
-def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh,iterations=100):
+def run_it(E,M,c,network='synth2',meta='c',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh,iterations=100):
     LLs=[]
     #~ E,M,c=loadNetwork(meta,network,c=c)
     N=len(M)
@@ -614,7 +614,7 @@ def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh
     
     for thi,theta in enumerate(thetas):
         max_iter = iterations
-        print "theta=",theta
+        #~ print "theta=",theta
         bt=b.copy()
         ct=c.copy()
         if not (theta>0):
@@ -626,7 +626,7 @@ def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh
         sbm.infer()
         LLth=-sbm.minEntropy
         
-        with open('%s-%s_partitions.txt' % (network,meta), 'a') as fp:
+        with open('out/%s-%s_partitions.txt' % (network,meta), 'a') as fp:
             for thiw,thetaw in enumerate(thetas):
                 fp.write('%e %f %f '  % (thetaw, sbm.max_neoLL[thiw], LLth))
                 for ci in sbm.cmax[:,thiw]:
@@ -648,7 +648,7 @@ def run_it(E,M,c,network='synth2',thetas=np.arange(0,0.011,0.001),sbmModel=SBMmh
 
 """Runs the neoSBM multiple times to find the average LL and qs paths
 """
-def run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=200,runs=1):
+def run(E,M,c,network,meta,thetamin,sbmModel=SBMmh,iterations=200,runs=1):
     thetas=np.append(0,10**np.arange(thetamin,0-thetamin/50.,-thetamin/50.))
     #~ thetas=np.append(0,10**np.arange(thetamin,np.log10(0.5),-thetamin/50.))
     
@@ -657,7 +657,7 @@ def run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=200,runs=1):
     sbm={SBMmh:"", DCSBMmh:"DC_"}[sbmModel]
     for i in xrange(runs):
         print i
-        LL,qs,neoLL = run_it(E,M,c,network,thetas,sbmModel=sbmModel,iterations=iterations)
+        LL,qs,neoLL = run_it(E,M,c,network,meta,thetas,sbmModel=sbmModel,iterations=iterations)
         LLs+=np.array(LL)
         qqs+=np.array(qs)
         
