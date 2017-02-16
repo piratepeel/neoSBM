@@ -1,4 +1,4 @@
-"""runNeoSBM.py - neoSBM main module
+"""neoSBM.py - neoSBM main module
     Copyright (C) 2016 Leto Peel
 
     This program is free software; you can redistribute it and/or modify
@@ -463,6 +463,7 @@ class SBMmh(object):
                 self.temp=1.+ 0.5*(self.temp_init - 1)*(1+np.cos(2*self.t*np.pi/self.maxiterations))*(self.t<self.maxiterations/2.)
 
 
+## NEEDS UPDATING
 class DCSBMmh(SBMmh):
     """Calculate entropy (negative log likelihood)
     """
