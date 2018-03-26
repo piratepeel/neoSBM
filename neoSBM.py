@@ -615,7 +615,7 @@ def run_it(E,M,c,network='synth2',meta='c',thetas=np.arange(0,0.011,0.001),sbmMo
     N=len(M)
     #~ print "network loaded"
     targetK=len(np.unique(M))
-    b=np.ones(len(M))
+    b=np.ones(len(M),dtype=int)
     minLL=np.inf
     sbmtext={SBMmh:"SBM", DCSBMmh:"DC"}[sbmModel]
     

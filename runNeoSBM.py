@@ -41,6 +41,16 @@ if __name__=="__main__":
     network = args.networkfile.split('.')[0]
     meta = args.metadatafile.split('.')[0]
     
+    thetamin=float(args.thetamin)
+    
+    try:
+        assert 10**thetamin < 1
+    except AssertionError:
+        print '\n\n'
+        raise AssertionError("Log10(Thetamin): {} Thetamin: {} \n Thetamin must be less than 1.".format(thetamin,10**thetamin))
+        
+    
+    
     if args.plot:
         import disp_output
         disp_output.plotLq(network,meta,log=True,DC=False)
@@ -63,6 +73,5 @@ if __name__=="__main__":
             c = ns.fitSBM(E,K,n,greedy_runs=20)
             ns.writePartition("%s_SBM%i.txt" % (network,K),c)
         
-        thetamin=float(args.thetamin)
         #ns.run(E,M,c,network,thetamin,sbmModel=SBMmh,iterations=100,logtheta=True,runs=10)
         ns.run(E,M,c,network,meta,thetamin,iterations=100,runs=10)
