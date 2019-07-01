@@ -26,7 +26,7 @@ One way to install a Python 2.7 environment without modifying your system Python
 Once miniconda has been installed, create an environment for neoSBM using the following command in bash (Linux/Mac) or cmd.exe (Windows)
 
 ```
-conda create -n neoSBM python=2.7
+conda create -n neoSBM python=2.7 numpy scipy
 ```
 
 Switch to this environment using the command
