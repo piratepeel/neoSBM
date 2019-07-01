@@ -6,7 +6,7 @@ For details on usage run:
 python runNeoSBM.py -h 
 ```
 
-This repository includes [Zachary's karate club](Zachary's karate club) dataset in the files `karate.txt` and `karate_faction.txt`.  
+This repository includes [Zachary's karate club](https://en.wikipedia.org/wiki/Zachary%27s_karate_club) dataset in the files `karate.txt` and `karate_faction.txt`.  
 Use the following command to run NeoSBM on this dataset.
 
 ```
