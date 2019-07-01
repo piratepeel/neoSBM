@@ -6,7 +6,8 @@ For details on usage run:
 python runNeoSBM.py -h 
 ```
 
-To run the example discussed in the paper, try 
+This repository includes [Zachary's karate club](Zachary's karate club) dataset in the files `karate.txt` and `karate_faction.txt`.  
+Use the following command to run NeoSBM on this dataset.
 
 ```
 python runNeoSBM.py "karate.txt" "karate_faction.txt" -3 -o "myoutput.txt"
