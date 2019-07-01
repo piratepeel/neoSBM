@@ -5,7 +5,12 @@ For details on usage run:
 ```
 python runNeoSBM.py -h 
 ```
-more details to follow.
+
+To run the example discussed in the paper, try 
+
+```
+python runNeoSBM.py "karate.txt" "karate_faction.txt" -3 -o "myoutput.txt"
+```
 
 # Installing a Python 2.7 environment using conda
 
