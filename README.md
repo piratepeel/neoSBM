@@ -1,17 +1,30 @@
 # neoSBM
-A new type of SBM
+A new type of SBM<sup>[1](#paperreference)</sup>
 
 For details on usage run:
 ```
 python runNeoSBM.py -h 
 ```
 
-This repository includes [Zachary's karate club](https://en.wikipedia.org/wiki/Zachary%27s_karate_club) dataset in the files `karate.txt` and `karate_faction.txt`.  
+This repository includes [Zachary's karate club](https://en.wikipedia.org/wiki/Zachary%27s_karate_club) dataset in the files `karate.txt` and `karate_faction.txt`.
 Use the following command to run NeoSBM on this dataset.
 
 ```
 python runNeoSBM.py "karate.txt" "karate_faction.txt" -3 -o "myoutput.txt"
 ```
+
+## Displaying the output
+
+To produce the graph of log likelihoods as a function of theta (as Fig. 4C in the paper), run the following from the python terminal
+
+```
+>>> import disp_output as do
+>>> do.plotLq('karate','karate_faction')
+```
+
+To produce the following
+
+![Lq plot](plotLq.png)
 
 # Installing a Python 2.7 environment using conda
 
@@ -46,3 +59,10 @@ It should now be possible to run neoSBM from this command prompt.  You can go ba
 ```
 conda deactivate
 ```
+
+# Reference
+
+<a name="paperreference">1</a>. Peel, Larremore & Clauset, The ground truth about metadata and community detection in networks, _Science Advances_ 2017 
+https://advances.sciencemag.org/content/3/5/e1602548
+
+![The neoSBM](neoSBM.png)
